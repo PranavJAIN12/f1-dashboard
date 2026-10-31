@@ -1,9 +1,9 @@
-import { api } from "@/lib/api";
+import { api, type RaceListItem } from "@/lib/api";
 export default async function Home() {
-    let races: any[] = [];
+    let races: RaceListItem[] = [];
     try {
-        races = (await api<any>("/races?year=2024")).races;
-    } catch { }
+        races = (await api<{ races: RaceListItem[] }>("/races?year=2024")).races;
+    } catch {}
     return (
         <div className="content">
             <div className="hero">
@@ -14,8 +14,8 @@ export default async function Home() {
                     Find the time.
                 </h1>
                 <p className="sub">
-                    F1 session data, telemetry and strategy analytics in one
-                    engineering-focused workspace.
+                    F1 session data, telemetry and strategy analytics in one engineering-focused
+                    workspace.
                 </p>
             </div>
             <div className="grid four">
@@ -38,9 +38,7 @@ export default async function Home() {
             </div>
             <div className="section card">
                 <h2>API surface</h2>
-                <p className="sub">
-                    Open Swagger to test every endpoint interactively.
-                </p>
+                <p className="sub">Open Swagger to test every endpoint interactively.</p>
                 <div className="api">
                     {[
                         "/races",

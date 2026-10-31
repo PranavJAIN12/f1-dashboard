@@ -1,9 +1,9 @@
-import { api } from "@/lib/api";
+import { api, type SessionResult } from "@/lib/api";
 export default async function Drivers() {
-    let ds: any[] = [];
+    let ds: SessionResult[] = [];
     try {
-        ds = (await api<any>("/drivers?year=2026&round=8")).drivers;
-    } catch { }
+        ds = (await api<{ drivers: SessionResult[] }>("/drivers?year=2026&round=8")).drivers;
+    } catch {}
     return (
         <div className="content">
             <div className="eyebrow">Driver intelligence</div>

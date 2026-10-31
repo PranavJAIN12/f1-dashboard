@@ -59,6 +59,14 @@ npm run build          # production build
 
 `next lint` was removed in Next.js 16, so `lint` runs ESLint directly. ESLint stays on 9.x because the `eslint-config-next` plugins do not yet support ESLint 10.
 
+#### Design system and app shell
+
+- **Theme tokens** live in `apps/web/app/globals.css` (`:root` for light, `.dark` for dark) and are exposed as Tailwind utilities in `apps/web/tailwind.config.js` (`bg-card`, `text-muted-foreground`, `border-border`, `bg-accent`, ...). Use these instead of raw palette colors.
+- **Theme switching** uses `next-themes` (class strategy, system default). The selection is stored in `localStorage` under `theme`.
+- **Shell** (`apps/web/components/shell/`): sticky sidebar from 1024px; below that, a Radix Dialog drawer. Navigation items are defined once in `apps/web/lib/navigation.ts`.
+- **Fonts:** Geist Sans and Geist Mono (SIL OFL) via the `geist` package, bundled locally.
+- The legacy utility classes used by pages (`.content`, `.card`, `.grid.four`, ...) remain in `globals.css`, now token-based and mobile-first.
+
 First real F1 test:
 `GET http://localhost:8000/api/v1/races/2024/8/results`
 

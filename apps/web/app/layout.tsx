@@ -1,47 +1,26 @@
+import type { Metadata } from "next";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import "./globals.css";
-import Link from "next/link";
-const links = [
-    ["Overview", "/"],
-    ["Races", "/races"],
-    ["Drivers", "/drivers"],
-    ["Compare", "/compare"],
-    ["Telemetry", "/telemetry"],
-    ["Analytics", "/analytics"],
-    ["Live", "/live"],
-];
-export default function Layout({ children }: { children: React.ReactNode }) {
+import { AppShell } from "@/components/shell/app-shell";
+import { ThemeProvider } from "@/components/theme-provider";
+
+export const metadata: Metadata = {
+    title: { default: "APEX", template: "%s | APEX" },
+    description: "F1 race intelligence and analytics.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html>
+        <html
+            lang="en"
+            className={`${GeistSans.variable} ${GeistMono.variable}`}
+            suppressHydrationWarning
+        >
             <body>
-                <div className="shell">
-                    <aside className="side">
-                        <div className="brand">APEX</div>
-                        <div className="label">Workspace</div>
-                        <nav className="nav">
-                            {links.map(([n, h]) => (
-                                <Link key={h} href={h}>
-                                    {n}
-                                </Link>
-                            ))}
-                        </nav>
-                        <div className="label">API</div>
-                        <nav className="nav">
-                            <a href="http://localhost:8000/docs" target="_blank">
-                                Swagger
-                            </a>
-                            <a href="http://localhost:8000/redoc" target="_blank">
-                                ReDoc
-                            </a>
-                        </nav>
-                    </aside>
-                    <main className="main">
-                        <header className="top">
-                            <span>F1 RACE INTELLIGENCE / DATA TERMINAL</span>
-                            <span>HISTORICAL MODE</span>
-                        </header>
-                        {children}
-                    </main>
-                </div>
+                <ThemeProvider>
+                    <AppShell>{children}</AppShell>
+                </ThemeProvider>
             </body>
         </html>
     );

@@ -1,5 +1,5 @@
 export default function Analytics() {
-    let a = [
+    const a = [
         "pace",
         "driver-comparison",
         "sector-times",
