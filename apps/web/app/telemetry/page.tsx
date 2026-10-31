@@ -3,9 +3,7 @@ export default function Telemetry() {
         <div className="content">
             <div className="eyebrow">Vehicle data</div>
             <h1>Telemetry</h1>
-            <p className="sub">
-                Speed, throttle, brake, gear, RPM, DRS and track coordinates.
-            </p>
+            <p className="sub">Speed, throttle, brake, gear, RPM, DRS and track coordinates.</p>
             <div className="card section api">
                 {[
                     "/telemetry/{driver_id}",
