@@ -1,0 +1,55 @@
+{
+  "base": "/api/v1",
+  "groups": {
+    "races": [
+      "GET /races",
+      "GET /races/{year}/{round_number}",
+      "GET /races/{year}/{round_number}/results",
+      "GET /races/{year}/{round_number}/laps",
+      "GET /races/{year}/{round_number}/pit-stops",
+      "GET /races/{year}/{round_number}/weather",
+      "GET /races/{year}/{round_number}/sessions"
+    ],
+    "drivers": [
+      "GET /drivers",
+      "GET /drivers/{driver_id}",
+      "GET /drivers/{driver_id}/results",
+      "GET /drivers/{driver_id}/laps",
+      "GET /drivers/{driver_id}/telemetry"
+    ],
+    "teams": [
+      "GET /teams",
+      "GET /teams/{team_id}",
+      "GET /teams/{team_id}/results"
+    ],
+    "analytics": [
+      "GET /analytics/pace",
+      "POST /analytics/driver-comparison",
+      "GET /analytics/sector-times",
+      "GET /analytics/tyre-strategy",
+      "GET /analytics/stints",
+      "GET /analytics/degradation",
+      "GET /analytics/position-changes",
+      "GET /analytics/gap-analysis"
+    ],
+    "telemetry": [
+      "GET /telemetry/{driver_id}",
+      "GET /telemetry/{driver_id}/lap/{lap_number}",
+      "GET /telemetry/compare",
+      "GET /telemetry/track"
+    ],
+    "live": [
+      "GET /live/session",
+      "GET /live/leaderboard",
+      "GET /live/timing",
+      "GET /live/pit-stops",
+      "GET /live/track-status"
+    ],
+    "ai": [
+      "POST /ai/ask",
+      "POST /ai/race-summary",
+      "POST /ai/driver-analysis",
+      "POST /ai/strategy-analysis"
+    ]
+  }
+}
