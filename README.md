@@ -4,7 +4,7 @@ Production-oriented F1 analytics monorepo.
 
 ## Stack
 - Next.js + TypeScript frontend
-- FastAPI + FastF1 data engine
+- FastAPI data engine backed by OpenF1
 - PostgreSQL/Supabase schema
 - Automatic OpenAPI/Swagger documentation
 
@@ -70,4 +70,21 @@ npm run build          # production build
 First real F1 test:
 `GET http://localhost:8000/api/v1/races/2024/8/results`
 
-The API uses FastF1 for historical data. Live endpoints are API contracts for the later live-ingestion phase.
+#### Data source
+
+All race data comes from [OpenF1](https://openf1.org): schedule, results, laps, tyre stints, pit stops, weather and car telemetry. No account or API key is needed.
+
+- **Coverage:** 2023 season onwards (historical sessions only). Live data requires a paid OpenF1 plan and is not wired up; the `/live` endpoints are placeholders.
+- **Rate limit:** the free tier allows 30 requests/minute, so responses are cached on disk (`OPENF1_CACHE_DIR`, default `.openf1-cache`) and requests are throttled. The first load of a race is slower; repeat loads are served from the cache.
+- **License:** OpenF1 data is for non-commercial use.
+- **TLS:** HTTPS uses the operating system trust store (`truststore`), so corporate proxy certificates work without disabling verification.
+
+Backend environment variables (`services/data-engine`):
+
+| Variable           | Default                     | Purpose                         |
+| ------------------ | --------------------------- | ------------------------------- |
+| `OPENF1_CACHE_DIR` | `.openf1-cache`             | Disk cache for OpenF1 responses |
+| `OPENF1_BASE_URL`  | `https://api.openf1.org/v1` | Override the API base URL       |
+| `CORS_ORIGINS`     | `http://localhost:3000`     | Comma-separated allowed origins |
+
+Live endpoints are API contracts for the later live-ingestion phase.

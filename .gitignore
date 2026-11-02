@@ -6,5 +6,5 @@ __pycache__/
 .pytest_cache/
 .env*
 !.env.example
-.fastf1-cache/
+.openf1-cache/
 *.log

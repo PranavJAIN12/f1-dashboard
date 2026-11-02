@@ -21,7 +21,7 @@ export default async function Home() {
             <div className="grid four">
                 <div className="card">
                     <div className="sub">DATA ENGINE</div>
-                    <div className="value">FastF1</div>
+                    <div className="value">OpenF1</div>
                 </div>
                 <div className="card">
                     <div className="sub">API</div>
