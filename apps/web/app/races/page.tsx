@@ -1,39 +1,52 @@
-import { getRaces, type RaceListItem } from "@/lib/api";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { connection } from "next/server";
+import type { ReactNode } from "react";
+import { ErrorState, StateMessage } from "@/components/data-state";
+import { SeasonView } from "@/components/season-view";
+import { getRaces } from "@/lib/engine";
+import { FIRST_SEASON, parseSeason, seasonOptions } from "@/lib/selection";
+import { Schedule } from "./schedule";
 
-export default async function Races() {
-    let rs: RaceListItem[] = [];
-    try {
-        rs = (await getRaces(2026)).races;
-    } catch {}
+type Props = { searchParams: Promise<{ year?: string | string[] }> };
+
+export default async function Races({ searchParams }: Props) {
+    await connection(); // Keep this page out of the build: it must not depend on the provider being up.
+    const selection = parseSeason((await searchParams).year);
+
+    let body: ReactNode;
+    if (!selection.ok) {
+        body = (
+            <StateMessage tone="invalid" title="Season not available">
+                {selection.message}
+            </StateMessage>
+        );
+    } else {
+        const res = await getRaces(selection.season);
+        if (!res.ok) body = <ErrorState error={res.error} />;
+        else if (!res.data.races.length)
+            body = (
+                <StateMessage tone="empty">
+                    OpenF1 lists no race weekends for {selection.season} yet.
+                </StateMessage>
+            );
+        else body = <Schedule races={res.data.races} season={selection.season} />;
+    }
+
     return (
         <div className="content">
-            <div className="eyebrow">Championship</div>
-            <h1>Races</h1>
-            <p className="sub">OpenF1 event schedule.</p>
-            <Card className="section overflow-hidden">
-                <CardHeader className="border-b bg-muted/40">
-                    <CardTitle>2026 event schedule</CardTitle>
-                </CardHeader>
-                <CardContent className="p-3">
-                    <div className="api">
-                        {rs.map((r) => (
-                            <Link className="row" href={`/races/${r.round}`} key={r.round}>
-                                <Badge variant="accent">R{String(r.round).padStart(2, "0")}</Badge>
-                                <span>
-                                    {r.event_name} · {r.country}
-                                </span>
-                                <Button asChild variant="ghost" size="sm" className="row-arrow">
-                                    <span>View race -&gt;</span>
-                                </Button>
-                            </Link>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+            <SeasonView
+                heading={
+                    <>
+                        <div className="eyebrow">Championship</div>
+                        <h1>Races</h1>
+                        <p className="sub">Season calendar and race weekends, from OpenF1.</p>
+                    </>
+                }
+                seasons={seasonOptions()}
+                value={selection.ok ? selection.season : null}
+                firstSeason={FIRST_SEASON}
+            >
+                {body}
+            </SeasonView>
         </div>
     );
 }

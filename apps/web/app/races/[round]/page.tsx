@@ -1,174 +1,209 @@
 import Link from "next/link";
-import {
-    getRaceDetails,
-    getRacePitStops,
-    getRaceResults,
-    type PitStop,
-    type RaceRef,
-    type SessionInfo,
-} from "@/lib/api";
+import { Suspense } from "react";
+import { ArrowLeft, CalendarDays, Globe, MapPin, Users } from "lucide-react";
+import { ErrorState, StateMessage } from "@/components/data-state";
+import { statusBadge } from "@/components/race-card";
+import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DeferredRaceData from "./deferred-data";
-import RaceTables from "./race-tables";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getRaceDetail } from "@/lib/engine";
+import { formatDateRange, formatUtcDate } from "@/lib/format";
+import {
+    findSession,
+    parseRound,
+    parseSeason,
+    parseSession,
+    raceStatuses,
+    sessionAvailability,
+} from "@/lib/selection";
+import { ClassifiedCount, SessionSections, Snapshot } from "./sections";
+import { SessionTabs } from "./session-tabs";
 
-type Props = { params: Promise<{ round: string }> };
+type Props = {
+    params: Promise<{ round: string }>;
+    searchParams: Promise<{ session?: string | string[]; year?: string | string[] }>;
+};
 
-function DataState({ message }: { message: string }) {
-    return <p className="muted">{message}</p>;
-}
 function metric(value: string | number | null | undefined) {
     return value === null || value === undefined || value === "" ? "-" : value;
 }
 
-export default async function RaceDetail({ params }: Props) {
-    const { round: roundParam } = await params;
-    const round = Number(roundParam);
-    const year = 2026;
-    const [detailsResponse, resultsResponse, pitStopsResponse] = await Promise.allSettled([
-        getRaceDetails(year, round),
-        getRaceResults(year, round),
-        getRacePitStops(year, round),
-    ]);
-    const details = detailsResponse.status === "fulfilled" ? detailsResponse.value : null;
-    const sessions = details?.sessions ?? [];
-    const results = resultsResponse.status === "fulfilled" ? resultsResponse.value.results : [];
-    const pitStops =
-        pitStopsResponse.status === "fulfilled" ? pitStopsResponse.value.pit_stops : [];
-    const pitStopNote =
-        pitStopsResponse.status === "fulfilled" ? pitStopsResponse.value.note : undefined;
-    const race =
-        details?.race ??
-        ((resultsResponse.status === "fulfilled" ? resultsResponse.value.race : undefined) as
-            RaceRef | undefined);
-    const winner = results.find((result) => result.position === 1);
-    const podium = results.filter((result) => result.position !== null && result.position <= 3);
+function BackLink({ href }: { href: string }) {
+    return (
+        <Link className="back" href={href}>
+            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+            All races
+        </Link>
+    );
+}
 
-    if (!race)
+function Shell({
+    children,
+    eyebrow,
+    title,
+    back = "/races",
+}: {
+    children: React.ReactNode;
+    eyebrow: string;
+    title: string;
+    back?: string;
+}) {
+    return (
+        <div className="content">
+            <BackLink href={back} />
+            <div className="eyebrow">{eyebrow}</div>
+            <h1>{title}</h1>
+            {children}
+        </div>
+    );
+}
+
+export default async function RaceDetail({ params, searchParams }: Props) {
+    const { round: roundParam } = await params;
+    const query = await searchParams;
+    const selection = parseSeason(query.year);
+    const round = parseRound(roundParam);
+    const code = parseSession(query.session);
+
+    if (!selection.ok)
         return (
-            <div className="content">
-                <Link className="back" href="/races">
-                    &lt;- All races
-                </Link>
-                <div className="eyebrow">Race detail</div>
-                <h1>Race unavailable</h1>
-                <p className="sub">
-                    The data engine could not return race {round} for {year}.
-                </p>
-            </div>
+            <Shell eyebrow="Race detail" title="Season not available">
+                <StateMessage tone="invalid" title="Season not available">
+                    {selection.message}
+                </StateMessage>
+            </Shell>
         );
+    const year = selection.season;
+    const back = `/races?year=${year}`;
+
+    if (round === null)
+        return (
+            <Shell eyebrow="Race detail" title="Invalid round" back={back}>
+                <StateMessage tone="invalid" title="Invalid round">
+                    &quot;{roundParam}&quot; is not a valid round number. Choose a race from the
+                    calendar.
+                </StateMessage>
+            </Shell>
+        );
+    if (code === null)
+        return (
+            <Shell eyebrow="Race detail" title="Invalid session" back={back}>
+                <StateMessage tone="invalid" title="Invalid session">
+                    The session must be one of R, Q, S, SQ, FP1, FP2 or FP3.
+                </StateMessage>
+            </Shell>
+        );
+
+    const detail = await getRaceDetail(year, round);
+    if (!detail.ok)
+        return (
+            <Shell
+                eyebrow={`${year} / Round ${String(round).padStart(2, "0")}`}
+                title="Race unavailable"
+                back={back}
+            >
+                <ErrorState error={detail.error} />
+            </Shell>
+        );
+
+    const { race, sessions } = detail.data;
+    const session = findSession(sessions, code);
+    const availability = session ? sessionAvailability(session) : null;
+    const current = session ? { year, round, code, session } : null;
+    // A lone weekend is always "next" when it has not started; the badge calls that "Upcoming".
+    const weekend = raceStatuses([race])[0];
+    const badge = statusBadge[weekend === "next" ? "upcoming" : weekend];
+    const place = [race.location, race.country].filter(Boolean).join(", ");
 
     return (
         <div className="content">
-            <Link className="back" href="/races">
-                &lt;- All races
-            </Link>
-            <div className="eyebrow">
-                {year} / Round {String(round).padStart(2, "0")}
-            </div>
+            <BackLink href={back} />
             <div className="title-row">
                 <div>
+                    <div className="eyebrow">
+                        {year} / Round {String(round).padStart(2, "0")}
+                    </div>
                     <h1>{race.event_name}</h1>
-                    <p className="sub">
-                        {race.country ?? "Unknown country"} / {race.location ?? "Unknown circuit"} /{" "}
-                        {race.date ?? "Date unavailable"}
+                    <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                            <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
+                            {place || "Location unavailable"}
+                        </span>
+                        <span className="flex items-center gap-1.5 tabular-nums">
+                            <CalendarDays aria-hidden="true" className="h-3.5 w-3.5" />
+                            {formatDateRange(race.date_start, race.date)}
+                        </span>
                     </p>
                 </div>
-                <Badge variant="accent">Race data</Badge>
+                <Badge variant={badge.variant} className="w-fit">
+                    {badge.label}
+                </Badge>
             </div>
-            <div className="grid four section">
-                <Card>
-                    <CardHeader>
-                        <div className="label">Country</div>
-                        <div className="value small-value">{metric(race.country)}</div>
-                    </CardHeader>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <div className="label">Location</div>
-                        <div className="value small-value">{metric(race.location)}</div>
-                    </CardHeader>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <div className="label">Sessions</div>
-                        <div className="value small-value">{sessions.length}</div>
-                    </CardHeader>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <div className="label">Classified drivers</div>
-                        <div className="value small-value">{results.length || "-"}</div>
-                    </CardHeader>
-                </Card>
+
+            <div className="section">
+                <SessionTabs sessions={sessions} selected={code} round={round} year={year} />
             </div>
-            <Card className="section snapshot-card">
-                <CardHeader>
-                    <div className="section-heading">
-                        <CardTitle>Race snapshot</CardTitle>
-                        <Badge variant="accent">Official results</Badge>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="snapshot-grid">
-                        <div>
-                            <span className="label">Winner</span>
-                            <div className="snapshot-value">
-                                {winner?.full_name ?? "Unavailable"}
-                            </div>
-                            <p className="muted">
-                                {winner
-                                    ? `${winner.team} · ${winner.points} points`
-                                    : "Results have not been returned."}
-                            </p>
-                        </div>
-                        <div>
-                            <span className="label">Podium</span>
-                            <div className="podium-list">
-                                {podium.length ? (
-                                    podium.map((result) => (
-                                        <Badge
-                                            variant={result.position === 1 ? "accent" : "outline"}
-                                            key={result.driver_id}
-                                        >
-                                            {result.position}. {result.abbreviation}
-                                        </Badge>
-                                    ))
-                                ) : (
-                                    <span className="muted">Unavailable</span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-            <Card className="section">
-                <CardHeader>
-                    <div className="section-heading">
-                        <CardTitle>Session schedule</CardTitle>
-                        <span className="code">GET /sessions</span>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {sessions.length ? (
-                        <div className="tag-list">
-                            {sessions.map((session: SessionInfo) => (
-                                <Badge variant="outline" key={session.type}>
-                                    {session.name} <b>{session.type}</b>
-                                </Badge>
-                            ))}
-                        </div>
+
+            <div className="section grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <StatCard label="Circuit" icon={MapPin}>
+                    {metric(race.location)}
+                </StatCard>
+                <StatCard label="Country" icon={Globe}>
+                    {metric(race.country)}
+                </StatCard>
+                <StatCard label="Sessions" icon={CalendarDays}>
+                    {sessions.length}
+                </StatCard>
+                <StatCard label="Classified drivers" icon={Users}>
+                    {current && availability === "past" ? (
+                        <Suspense fallback={<Skeleton className="h-6 w-8" />}>
+                            <ClassifiedCount {...current} />
+                        </Suspense>
                     ) : (
-                        <DataState message="Session metadata unavailable." />
+                        "-"
                     )}
-                </CardContent>
-            </Card>
-            <RaceTables
-                results={results}
-                pitStops={pitStops as PitStop[]}
-                pitStopNote={pitStopNote}
-            />
-            <DeferredRaceData year={year} round={round} />
+                </StatCard>
+            </div>
+
+            {current && availability === "past" ? (
+                <Card className="section">
+                    <CardHeader>
+                        <div className="section-heading">
+                            <CardTitle>{session?.name} snapshot</CardTitle>
+                            <Badge variant="accent">Official results</Badge>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+                            <Snapshot {...current} />
+                        </Suspense>
+                    </CardContent>
+                </Card>
+            ) : null}
+
+            {!session ? (
+                <StateMessage tone="missing" title="Session not in this weekend">
+                    Round {round} has no {code} session. Choose one from the sessions above.
+                </StateMessage>
+            ) : availability === "cancelled" ? (
+                <StateMessage tone="unavailable" title="Session cancelled">
+                    {session.name} was cancelled.
+                </StateMessage>
+            ) : availability === "upcoming" ? (
+                <StateMessage tone="unavailable" title="Session has not taken place">
+                    {session.name} is scheduled for {formatUtcDate(session.date_start)}. Data
+                    appears after the session ends.
+                </StateMessage>
+            ) : availability === "live" ? (
+                <StateMessage tone="unavailable" title="Session is live or just ended">
+                    OpenF1 treats data from 30 minutes before a session until 30 minutes after it as
+                    live. Live data needs a paid OpenF1 plan and is not enabled here, so this
+                    session becomes available shortly after that window closes.
+                </StateMessage>
+            ) : current ? (
+                <SessionSections {...current} />
+            ) : null}
         </div>
     );
 }
