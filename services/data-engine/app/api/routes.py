@@ -1,18 +1,25 @@
-from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Path, Query
 from pydantic import BaseModel, Field
-from app.openf1_service import race, results, laps, pit_stops as extract_pit_stops, telemetry, weather as weather_data, schedule, sessions as session_metadata
+from app.contracts import (
+    DriversResponse, LapsResponse, PitStopsResponse, RaceDetailResponse, RacesResponse, ResultsResponse,
+    SessionCode, WeatherResponse,
+)
+from app.openf1_service import FIRST_SEASON, race, results, laps, pit_stops as extract_pit_stops, telemetry, weather as weather_data, schedule
 from collections import defaultdict
 from statistics import mean
 
 router = APIRouter()
 
+Year = Annotated[int, Path(ge=FIRST_SEASON, le=2100, description="Season year. OpenF1 has data from 2023.")]
+Round = Annotated[int, Path(ge=1, le=40, description="1-based race weekend within the season, excluding testing.")]
+Session = Annotated[SessionCode, Query(description="R race, Q qualifying, S sprint, SQ sprint qualifying, FP1-FP3 practice.")]
+
 def safe(fn):
     try: return fn()
     except HTTPException: raise
-    except Exception as e: raise HTTPException(502, f"F1 data request failed: {e}")
-
-def race_ref(year, round_number):
-    return race(year, round_number)
+    except Exception as e: raise HTTPException(500, {"code": "internal_error", "message": f"Unexpected error: {e}"})
 
 class DriverComparison(BaseModel):
     year: int
@@ -26,55 +33,58 @@ class AskRequest(BaseModel):
     round: int | None = None
 
 # RACES
-@router.get("/races", tags=["Races"], summary="List races for a season")
-def list_races(year: int = Query(2024, ge=2023, le=2100)):
+@router.get("/races", tags=["Races"], summary="List races for a season", response_model=RacesResponse)
+def list_races(year: int = Query(2024, ge=FIRST_SEASON, le=2100)):
     return safe(lambda: {"year": year, "races": schedule(year)})
 
-@router.get("/races/{year}/{round_number}", tags=["Races"], summary="Get race details")
-def race_details(year: int, round_number: int):
-    return safe(lambda: {"race": race_ref(year, round_number), "sessions": session_metadata(year, round_number)})
-
-@router.get("/races/{year}/{round_number}/results", tags=["Races"], summary="Get session results")
-def race_results(year: int, round_number: int, session: str = Query("R")):
-    return safe(lambda: {"race": race_ref(year, round_number), "session": session,
-                         "results": results(year, round_number, session)[1]})
-
-@router.get("/races/{year}/{round_number}/laps", tags=["Races"], summary="Get lap data")
-def race_laps(year: int, round_number: int, session: str = "R",
-              driver: str | None = None, lap_from: int | None = None, lap_to: int | None = None):
+@router.get("/races/{year}/{round_number}", tags=["Races"], summary="Get race details", response_model=RaceDetailResponse)
+def race_details(year: Year, round_number: Round):
     def work():
-        rows = laps(year, round_number, session)[1]
+        detail = race(year, round_number)
+        return {"race": detail, "sessions": detail["sessions"]}
+    return safe(work)
+
+@router.get("/races/{year}/{round_number}/results", tags=["Races"], summary="Get session results", response_model=ResultsResponse)
+def race_results(year: Year, round_number: Round, session: Session = "R"):
+    def work():
+        ref, rows = results(year, round_number, session)
+        return {"race": ref, "session": session, "results": rows}
+    return safe(work)
+
+@router.get("/races/{year}/{round_number}/laps", tags=["Races"], summary="Get lap data", response_model=LapsResponse)
+def race_laps(year: Year, round_number: Round, session: Session = "R",
+              driver: Annotated[str | None, Query(min_length=2, max_length=3)] = None,
+              lap_from: Annotated[int | None, Query(ge=1)] = None,
+              lap_to: Annotated[int | None, Query(ge=1)] = None):
+    def work():
+        ref, rows = laps(year, round_number, session)
         if driver: rows = [x for x in rows if x["driver"] == driver.upper()]
         if lap_from: rows = [x for x in rows if x["lap_number"] and x["lap_number"] >= lap_from]
         if lap_to: rows = [x for x in rows if x["lap_number"] and x["lap_number"] <= lap_to]
-        return {"race": race_ref(year, round_number), "session": session, "laps": rows}
+        return {"race": ref, "session": session, "laps": rows}
     return safe(work)
 
-@router.get("/races/{year}/{round_number}/pit-stops", tags=["Races"], summary="Get pit-stop data")
-def pit_stops(year: int, round_number: int):
+@router.get("/races/{year}/{round_number}/pit-stops", tags=["Races"], summary="Get pit-stop data", response_model=PitStopsResponse)
+def pit_stops(year: Year, round_number: Round, session: Session = "R"):
     def work():
-        _, rows = extract_pit_stops(year, round_number)
-        response = {"race": race_ref(year, round_number), "pit_stops": rows}
-        if not rows:
-            response["note"] = "No pit stops were returned by OpenF1 for this race session."
-        return response
+        ref, rows = extract_pit_stops(year, round_number, session)
+        return {"race": ref, "session": session, "pit_stops": rows}
     return safe(work)
 
-@router.get("/races/{year}/{round_number}/weather", tags=["Races"], summary="Get session weather")
-def weather(year: int, round_number: int, session: str = "R"):
+@router.get("/races/{year}/{round_number}/weather", tags=["Races"], summary="Get session weather", response_model=WeatherResponse)
+def weather(year: Year, round_number: Round, session: Session = "R"):
     def work():
-        _, rows = weather_data(year, round_number, session)
-        return {"race": race_ref(year, round_number), "session": session,
-                "weather": rows}
+        ref, rows = weather_data(year, round_number, session)
+        return {"race": ref, "session": session, "weather": rows}
     return safe(work)
 
-@router.get("/races/{year}/{round_number}/sessions", tags=["Races"], summary="Get session metadata")
-def sessions(year: int, round_number: int):
-    return safe(lambda: {"race": race_ref(year, round_number), "sessions": session_metadata(year, round_number)})
+@router.get("/races/{year}/{round_number}/sessions", tags=["Races"], summary="Get session metadata", response_model=RaceDetailResponse)
+def sessions(year: Year, round_number: Round):
+    return race_details(year, round_number)
 
 # DRIVERS
-@router.get("/drivers", tags=["Drivers"], summary="List drivers")
-def drivers(year: int = 2024, round_number: int = Query(8, alias="round")):
+@router.get("/drivers", tags=["Drivers"], summary="List drivers", response_model=DriversResponse)
+def drivers(year: int = Query(2024, ge=FIRST_SEASON, le=2100), round_number: int = Query(8, alias="round", ge=1, le=40)):
     return safe(lambda: {"drivers": results(year, round_number)[1]})
 
 @router.get("/drivers/{driver_id}", tags=["Drivers"], summary="Get driver profile")
@@ -193,16 +203,7 @@ def gaps(year: int = 2024, round_number: int = Query(8, alias="round")):
             "gaps": {d: x["median_lap_seconds"]-best for d, x in m.items()} if best else {}}
 
 # TELEMETRY
-@router.get("/telemetry/{driver_id}", tags=["Telemetry"], summary="Get driver telemetry")
-def telemetry_api(driver_id: str, lap: int = Query(..., ge=1),
-                  year: int = 2024, round_number: int = Query(8, alias="round")):
-    return driver_telemetry(driver_id, lap, year, round_number)
-
-@router.get("/telemetry/{driver_id}/lap/{lap_number}", tags=["Telemetry"], summary="Get telemetry for one lap")
-def telemetry_lap(driver_id: str, lap_number: int, year: int = 2024,
-                  round_number: int = Query(8, alias="round")):
-    return telemetry_api(driver_id, lap_number, year, round_number)
-
+# Fixed paths must be declared before /telemetry/{driver_id}, which would otherwise capture them.
 @router.get("/telemetry/compare", tags=["Telemetry"], summary="Compare two telemetry traces")
 def telemetry_compare(driver_a: str, driver_b: str, lap_a: int, lap_b: int,
                       year: int = 2024, round_number: int = Query(8, alias="round")):
@@ -214,6 +215,16 @@ def track(driver: str, lap: int, year: int = 2024, round_number: int = Query(8, 
     return {"driver": driver, "lap": lap,
             "points": [{"x": p["x"], "y": p["y"], "distance": p["distance"]}
                        for p in telemetry(year, round_number, driver, lap)]}
+
+@router.get("/telemetry/{driver_id}", tags=["Telemetry"], summary="Get driver telemetry")
+def telemetry_api(driver_id: str, lap: int = Query(..., ge=1),
+                  year: int = 2024, round_number: int = Query(8, alias="round")):
+    return driver_telemetry(driver_id, lap, year, round_number)
+
+@router.get("/telemetry/{driver_id}/lap/{lap_number}", tags=["Telemetry"], summary="Get telemetry for one lap")
+def telemetry_lap(driver_id: str, lap_number: int, year: int = 2024,
+                  round_number: int = Query(8, alias="round")):
+    return telemetry_api(driver_id, lap_number, year, round_number)
 
 # LIVE
 @router.get("/live/session", tags=["Live"], summary="Live session state")
