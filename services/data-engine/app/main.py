@@ -6,7 +6,7 @@ import os
 app = FastAPI(
     title="APEX F1 Race Intelligence API",
     version="1.0.0",
-    description="F1 races, drivers, teams, analytics, telemetry, live contracts and AI analyst APIs powered by FastF1.",
+    description="F1 races, drivers, teams, analytics, telemetry, live contracts and AI analyst APIs powered by OpenF1.",
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",

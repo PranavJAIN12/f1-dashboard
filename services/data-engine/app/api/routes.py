@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from app.fastf1_service import race, results, laps, pit_stops as extract_pit_stops, telemetry, weather as weather_data, load
+from app.openf1_service import race, results, laps, pit_stops as extract_pit_stops, telemetry, weather as weather_data, schedule, sessions as session_metadata
 from collections import defaultdict
 from statistics import mean
 
@@ -13,19 +13,6 @@ def safe(fn):
 
 def race_ref(year, round_number):
     return race(year, round_number)
-
-def session_metadata(year, round_number):
-    s = load(year, round_number, "R")
-    sessions = []
-    for number in range(1, 6):
-        name = s.event.get(f"Session{number}")
-        if name and str(name) != "nan":
-            session_type = {
-                "Practice 1": "FP1", "Practice 2": "FP2", "Practice 3": "FP3",
-                "Qualifying": "Q", "Sprint": "S", "Race": "R",
-            }.get(str(name), str(name))
-            sessions.append({"name": str(name), "type": session_type})
-    return sessions
 
 class DriverComparison(BaseModel):
     year: int
@@ -40,16 +27,8 @@ class AskRequest(BaseModel):
 
 # RACES
 @router.get("/races", tags=["Races"], summary="List races for a season")
-def list_races(year: int = Query(2024, ge=1950, le=2100)):
-    import fastf1
-    def work():
-        df = fastf1.get_event_schedule(year, include_testing=False)
-        return {"year": year, "races": [{
-            "round": int(r["RoundNumber"]), "event_name": r["EventName"],
-            "country": r.get("Country"), "location": r.get("Location"),
-            "date": r.get("EventDate").isoformat() if hasattr(r.get("EventDate"), "isoformat") else None
-        } for _, r in df.iterrows()]}
-    return safe(work)
+def list_races(year: int = Query(2024, ge=2023, le=2100)):
+    return safe(lambda: {"year": year, "races": schedule(year)})
 
 @router.get("/races/{year}/{round_number}", tags=["Races"], summary="Get race details")
 def race_details(year: int, round_number: int):
@@ -77,7 +56,7 @@ def pit_stops(year: int, round_number: int):
         _, rows = extract_pit_stops(year, round_number)
         response = {"race": race_ref(year, round_number), "pit_stops": rows}
         if not rows:
-            response["note"] = "No pit-in/pit-out signals were returned by FastF1 for this race session."
+            response["note"] = "No pit stops were returned by OpenF1 for this race session."
         return response
     return safe(work)
 
@@ -167,14 +146,16 @@ def comparison(body: DriverComparison):
 @router.get("/analytics/sector-times", tags=["Analytics"], summary="Get best sector times")
 def sectors(year: int = 2024, round_number: int = Query(8, alias="round")):
     def work():
-        s = load(year, round_number, "R")
         out = {}
-        for d in s.laps["Driver"].dropna().unique():
-            x = s.laps.pick_drivers(d)
-            out[d] = {}
-            for i, col in enumerate(["Sector1Time", "Sector2Time", "Sector3Time"], 1):
-                vals = [v.total_seconds() for v in x[col].dropna()] if col in x else []
-                out[d][f"best_sector_{i}"] = min(vals) if vals else None
+        for r in laps(year, round_number)[1]:
+            best = out.setdefault(r["driver"], {})
+            for i in (1, 2, 3):
+                v = r[f"sector_{i}"]
+                if v is not None:
+                    best[f"best_sector_{i}"] = min(v, best.get(f"best_sector_{i}", v))
+        for best in out.values():
+            for i in (1, 2, 3):
+                best.setdefault(f"best_sector_{i}", None)
         return {"sector_times": out}
     return safe(work)
 
@@ -256,13 +237,13 @@ def ai_ask(body: AskRequest):
 def ai_summary(year: int = 2024, round_number: int = Query(8, alias="round")):
     return safe(lambda: {"answer": f"{race(year, round_number)['event_name']} race summary: winner was "
                                     f"{results(year, round_number)[1][0]['full_name']}.",
-                         "sources": ["FastF1 race results"]})
+                         "sources": ["OpenF1 race results"]})
 
 @router.post("/ai/driver-analysis", tags=["AI Analyst"], summary="Generate driver analysis")
 def ai_driver(driver_id: str, year: int = 2024, round_number: int = Query(8, alias="round")):
     return safe(lambda: {"answer": str(next(r for r in results(year, round_number)[1]
                                              if r["driver_id"] == driver_id.upper())),
-                         "sources": ["FastF1 session results"]})
+                         "sources": ["OpenF1 session results"]})
 
 @router.post("/ai/strategy-analysis", tags=["AI Analyst"], summary="Generate strategy analysis")
 def ai_strategy(year: int = 2024, round_number: int = Query(8, alias="round")):

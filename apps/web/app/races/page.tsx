@@ -13,7 +13,7 @@ export default async function Races() {
         <div className="content">
             <div className="eyebrow">Championship</div>
             <h1>Races</h1>
-            <p className="sub">FastF1 event schedule.</p>
+            <p className="sub">OpenF1 event schedule.</p>
             <Card className="section overflow-hidden">
                 <CardHeader className="border-b bg-muted/40">
                     <CardTitle>2026 event schedule</CardTitle>

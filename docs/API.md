@@ -2,6 +2,8 @@
 
 Run the data engine and open `http://localhost:8000/docs`.
 
+Data comes from OpenF1 and covers the 2023 season onwards. Rounds are numbered by race weekend (testing excluded), and sessions use the codes `R`, `Q`, `S`, `SQ`, `FP1`, `FP2`, `FP3`. Telemetry is sampled at about 3.7 Hz.
+
 Groups:
 - Races: schedule, race details, results, laps, pit stops, weather, sessions
 - Drivers: profiles, results, laps, telemetry
