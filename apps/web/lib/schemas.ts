@@ -5,6 +5,17 @@ import { z } from "zod";
 
 const timestamp = z.iso.datetime({ offset: true });
 
+// Only the F1 media host is allowed (next.config.ts); anything else is dropped, not rendered.
+const circuitImage = z
+    .url({ protocol: /^https$/, hostname: /^media\.formula1\.com$/ })
+    .nullable()
+    .catch(null);
+const hexColour = z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .nullable()
+    .catch(null);
+
 export const sessionCodeSchema = z.enum(["R", "Q", "S", "SQ", "FP1", "FP2", "FP3"]);
 export type SessionCode = z.infer<typeof sessionCodeSchema>;
 
@@ -27,6 +38,7 @@ export const raceListItemSchema = z.object({
     event_name: z.string(),
     country: z.string().nullable(),
     location: z.string().nullable(),
+    circuit_image: circuitImage,
     date_start: timestamp,
     date: timestamp,
 });
@@ -142,6 +154,32 @@ export const weatherResponseSchema = z.object({
     session: sessionCodeSchema,
     weather: z.array(weatherSampleSchema),
 });
+
+export const telemetrySampleSchema = z.object({
+    time_seconds: z.number().nullable(),
+    distance: z.number().nullable(),
+    speed: z.number().nullable(),
+    throttle: z.number().nullable(),
+    brake: z.number().nullable(),
+    gear: z.number().int().nullable(),
+    rpm: z.number().nullable(),
+    drs: z.number().int().nullable(),
+    x: z.number().nullable(),
+    y: z.number().nullable(),
+});
+export type TelemetrySample = z.infer<typeof telemetrySampleSchema>;
+
+export const telemetryResponseSchema = z.object({
+    race: sessionRaceSchema,
+    session: sessionCodeSchema,
+    driver_id: z.string(),
+    team: z.string().nullable(),
+    team_colour: hexColour,
+    lap_number: z.number().int(),
+    lap_time_seconds: z.number().nullable(),
+    telemetry: z.array(telemetrySampleSchema),
+});
+export type LapTelemetry = z.infer<typeof telemetryResponseSchema>;
 
 // Shape of FastAPI error bodies: our own {code, message} or FastAPI's 422 validation list.
 export const errorBodySchema = z.object({

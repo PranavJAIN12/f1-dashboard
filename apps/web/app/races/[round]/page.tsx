@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft, CalendarDays, Globe, MapPin, Users } from "lucide-react";
 import { ErrorState, StateMessage } from "@/components/data-state";
+import { CircuitImage } from "@/components/circuit-image";
 import { statusBadge } from "@/components/race-card";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -136,9 +137,17 @@ export default async function RaceDetail({ params, searchParams }: Props) {
                         </span>
                     </p>
                 </div>
-                <Badge variant={badge.variant} className="w-fit">
-                    {badge.label}
-                </Badge>
+                <div className="flex flex-col items-start gap-3 sm:items-end">
+                    <CircuitImage
+                        src={race.circuit_image}
+                        alt={`${race.event_name} circuit layout`}
+                        className="h-24 w-32"
+                        eager
+                    />
+                    <Badge variant={badge.variant} className="w-fit">
+                        {badge.label}
+                    </Badge>
+                </div>
             </div>
 
             <div className="section">

@@ -28,6 +28,7 @@ class Meeting(_Row):
     date_end: UtcDateTime
     country_name: str | None = None
     location: str | None = None
+    circuit_image: str | None = None
     is_cancelled: bool = False
 
 
@@ -45,6 +46,7 @@ class Driver(_Row):
     name_acronym: str | None = None
     full_name: str | None = None
     team_name: str | None = None
+    team_colour: str | None = None  # RRGGBB, no leading #
     headshot_url: str | None = None
 
 

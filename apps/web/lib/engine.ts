@@ -8,6 +8,7 @@ import {
     raceDetailResponseSchema,
     racesResponseSchema,
     resultsResponseSchema,
+    telemetryResponseSchema,
     weatherResponseSchema,
     type SessionCode,
 } from "@/lib/schemas";
@@ -206,3 +207,17 @@ export const getLaps = (year: number, round: number, session: SessionCode, o: Se
 
 export const getWeather = (year: number, round: number, session: SessionCode, o: SessionRequest) =>
     get(sessionPath(year, round, "weather", session), weatherResponseSchema, o);
+
+export const getTelemetry = (
+    year: number,
+    round: number,
+    session: SessionCode,
+    driver: string,
+    lap: number,
+    o: SessionRequest,
+) =>
+    get(
+        `/telemetry/${encodeURIComponent(driver)}?year=${year}&round=${round}&session=${session}&lap=${lap}`,
+        telemetryResponseSchema,
+        o,
+    );
