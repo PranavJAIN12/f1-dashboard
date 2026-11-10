@@ -24,6 +24,7 @@ class RaceListItem(BaseModel):
     event_name: str
     country: str | None
     location: str | None
+    circuit_image: str | None  # official track icon URL
     date_start: str
     date: str
 
@@ -134,3 +135,46 @@ class WeatherResponse(BaseModel):
     race: SessionRace
     session: SessionCode
     weather: list[WeatherSample]
+
+
+class TelemetrySample(BaseModel):
+    time_seconds: float | None  # since the lap started
+    distance: float | None  # metres, integrated from speed, so approximate
+    speed: float | None  # km/h
+    throttle: float | None  # %
+    brake: float | None  # 0 or 100
+    gear: int | None
+    rpm: float | None
+    drs: int | None  # raw OpenF1 code: 10, 12 and 14 mean open
+    x: float | None
+    y: float | None
+
+
+class TelemetryResponse(BaseModel):
+    race: SessionRace
+    session: SessionCode
+    driver_id: str
+    team: str | None
+    team_colour: str | None  # #RRGGBB
+    lap_number: int
+    lap_time_seconds: float | None
+    telemetry: list[TelemetrySample]  # empty when the lap has no usable timing
+
+
+class TelemetryCompareResponse(BaseModel):
+    driver_a: TelemetryResponse
+    driver_b: TelemetryResponse
+
+
+class TrackPoint(BaseModel):
+    x: float | None
+    y: float | None
+    distance: float | None
+
+
+class TrackResponse(BaseModel):
+    race: SessionRace
+    session: SessionCode
+    driver: str
+    lap: int
+    points: list[TrackPoint]

@@ -253,6 +253,7 @@ def _event(meeting, round_number, sessions):
         "round": round_number, "meeting_key": meeting.meeting_key,
         "event_name": meeting.meeting_name, "country": meeting.country_name,
         "location": meeting.location,
+        "circuit_image": meeting.circuit_image,
         "date_start": meeting.date_start.isoformat(), "date": meeting.date_end.isoformat(),
         "sessions": [_session_info(x) for x in sessions],
     }
@@ -475,23 +476,31 @@ def pit_stops(year, round_number, code="R"):
 
 # ---- Telemetry ----
 def telemetry(year, round_number, driver, lap, code="R"):
+    """Returns (race ref, lap metadata, samples) for one driver's lap in a session."""
     meeting, session, _ = resolve(year, round_number, code)
+    ref = _race_ref(year, round_number, meeting, session)
     key, ttl = session.session_key, _ttl(session)
-    number = next((n for n, d in _drivers(session).items() if (d.name_acronym or "").upper() == driver.upper()), None)
+    drivers = _drivers(session)
+    number = next((n for n, d in drivers.items() if (d.name_acronym or "").upper() == driver.upper()), None)
     if number is None:
         raise not_found(f"Driver '{driver}' did not take part in this session.")
     row = next((l for l in fetch("laps", s.Lap, ttl, session_key=key, driver_number=number) if l.lap_number == lap), None)
     if row is None:
         raise not_found(f"{driver.upper()} has no lap {lap} in this session.")
+    info = drivers[number]
+    colour = (info.team_colour or "").lstrip("#")
+    meta = {"driver_id": driver.upper(), "team": info.team_name,
+            "team_colour": f"#{colour}" if colour else None,
+            "lap_number": lap, "lap_time_seconds": row.lap_duration}
     if not row.date_start or not row.lap_duration:
-        return []  # The lap exists but has no usable timing, so there is no window to fetch.
+        return ref, meta, []  # The lap exists but has no usable timing, so there is no window to fetch.
 
     start = row.date_start
     window = {"session_key": key, "driver_number": number,
               "date>=": start.isoformat(), "date<": (start + timedelta(seconds=row.lap_duration)).isoformat()}
     car = pd.DataFrame([c.model_dump() for c in fetch("car_data", s.CarData, ttl, **window)])
     if car.empty:
-        return []
+        return ref, meta, []
     car["date"] = pd.to_datetime(car["date"], utc=True)
     car = car.sort_values("date")
     seconds = (car["date"] - pd.Timestamp(start)).dt.total_seconds()
@@ -511,7 +520,7 @@ def telemetry(year, round_number, driver, lap, code="R"):
     def whole(v):
         return None if v is None or pd.isna(v) else int(v)
 
-    return [{
+    return ref, meta, [{
         "time_seconds": num(t), "distance": num(r["distance"]), "speed": num(r["speed"]),
         "throttle": num(r["throttle"]), "brake": num(r["brake"]),
         "gear": whole(r["n_gear"]), "rpm": num(r["rpm"]), "drs": whole(r["drs"]),

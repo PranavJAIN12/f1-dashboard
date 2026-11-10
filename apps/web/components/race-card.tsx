@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
+import { CircuitImage } from "@/components/circuit-image";
 import { Badge } from "@/components/ui/badge";
 import { formatDateRange } from "@/lib/format";
 import type { RaceListItem } from "@/lib/schemas";
@@ -47,12 +48,19 @@ export function RaceCard({
                     </span>
                     <Badge variant={badge.variant}>{badge.label}</Badge>
                 </div>
-                <div className="min-w-0">
-                    <h2 className="text-base font-semibold leading-snug">{race.event_name}</h2>
-                    <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <MapPin aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{place}</span>
-                    </p>
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h2 className="text-base font-semibold leading-snug">{race.event_name}</h2>
+                        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <MapPin aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{place}</span>
+                        </p>
+                    </div>
+                    <CircuitImage
+                        src={race.circuit_image}
+                        alt={`${race.event_name} circuit layout`}
+                        className="h-14 w-[4.5rem]"
+                    />
                 </div>
                 <div className="mt-auto flex items-center justify-between border-t pt-3 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1.5 tabular-nums">
