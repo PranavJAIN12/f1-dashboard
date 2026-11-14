@@ -28,7 +28,10 @@ export function DriverControls({
 
     return (
         <div
-            className={cn("flex flex-wrap items-end gap-x-4 gap-y-3", pending && "opacity-60")}
+            className={cn(
+                "grid w-full grid-cols-[6.5rem_minmax(0,1fr)] items-end gap-3",
+                pending && "opacity-60",
+            )}
             aria-busy={pending}
         >
             <div className="flex min-w-0 flex-col gap-1.5">
@@ -37,6 +40,7 @@ export function DriverControls({
                 </label>
                 <Select
                     id="drivers-season"
+                    className="w-full"
                     value={String(year)}
                     onChange={(event) => navigate({ year: Number(event.target.value) })}
                 >
@@ -53,7 +57,7 @@ export function DriverControls({
                 </label>
                 <Select
                     id="drivers-race"
-                    className="max-w-64"
+                    className="w-full min-w-0"
                     value={String(round)}
                     onChange={(event) => navigate({ year, round: Number(event.target.value) })}
                 >

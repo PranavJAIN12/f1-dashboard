@@ -54,8 +54,8 @@ const pages: {
         href: "/drivers",
         icon: Users,
         status: "Available",
-        text: "Finishing order, points, starting grid and fastest lap for one race. Not season standings.",
-        use: "See how the drivers finished in the selected race.",
+        text: "Choose a season and race to see the finishing order, points, starting grid and fastest lap. Not season standings.",
+        use: "See how the drivers finished in a completed race.",
     },
     {
         name: "Telemetry",
@@ -213,7 +213,7 @@ const metricGroups: { title: string; where: string; metrics: Metric[] }[] = [
                     "Points from that race only; the starting slot with a triangle for places gained or lost (grid minus finish); and the driver’s best lap time.",
                 unit: "Points, positions, m:ss.mmm",
                 period: "One reference race",
-                caveat: "Not championship totals. The page names the race it uses.",
+                caveat: "Not championship totals. Use the Season and Race selectors to choose which Grand Prix to show.",
             },
             {
                 name: "Drivers, Teams, Winner, Fastest lap",
@@ -388,9 +388,10 @@ export function DashboardSection() {
                     and up), or the <Kbd>Open menu</Kbd> button in the top bar on smaller ones.
                 </li>
                 <li>
-                    <strong>Choose a season</strong> with the Season selector on Races (2023 up to
-                    the latest season). Telemetry and Race results have their own Season selector;
-                    Race results also lets you choose a race weekend.
+                    <strong>Choose a season and race.</strong> Races, Telemetry and Race results
+                    have Season selectors. Race results also has a Race selector; it starts on the
+                    latest completed race for that season (or the first listed race if none have
+                    finished), and you can change it at any time.
                 </li>
                 <li>
                     <strong>Open a weekend</strong> by clicking a race card. Use the session tabs
@@ -399,7 +400,8 @@ export function DashboardSection() {
                 </li>
                 <li>
                     <strong>Share a view.</strong> Telemetry keeps every choice in the page address,
-                    so you can bookmark or send a link to an exact lap comparison.
+                    so you can bookmark or send a link to an exact lap comparison. Race results
+                    keeps the selected season and race in the address too.
                 </li>
                 <li>
                     <strong>Comfort and access.</strong> The Theme selector offers System, Light and
@@ -548,9 +550,9 @@ export function DashboardSection() {
                         working workspace. The tag looks out of date.
                     </li>
                     <li>
-                        Which season and race the deployed site defaults to. The code default is
-                        2026 (<Kbd>DEFAULT_SEASON</Kbd>), and the Race results page uses round 8 of
-                        that season.
+                        Which season the deployed site defaults to. The code default is 2026 (
+                        <Kbd>DEFAULT_SEASON</Kbd>); Race results starts with the latest completed
+                        race in the selected season.
                     </li>
                     <li>
                         Whether season standings will be added, and whether Compare and Analytics

@@ -41,7 +41,7 @@ const features: Feature[] = [
         label: "Race results",
         href: "/drivers",
         icon: Users,
-        text: "See the finishing order, points, starting position and fastest lap from one race.",
+        text: "Choose a season and race to see the finishing order, points and fastest lap.",
         tag: { label: "Available", variant: "accent" },
     },
     {
