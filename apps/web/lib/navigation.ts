@@ -1,5 +1,6 @@
 import {
     Activity,
+    BookOpen,
     ChartColumn,
     Flag,
     GitCompareArrows,
@@ -19,6 +20,7 @@ export const primaryNav: NavItem[] = [
     { label: "Telemetry", href: "/telemetry", icon: Activity },
     { label: "Analytics", href: "/analytics", icon: ChartColumn },
     { label: "Live", href: "/live", icon: Radio },
+    { label: "Guide", href: "/guide", icon: BookOpen },
 ];
 
 // Same destinations the original sidebar linked to, derived from the configured engine URL.
