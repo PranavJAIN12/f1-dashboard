@@ -389,8 +389,8 @@ export function DashboardSection() {
                 </li>
                 <li>
                     <strong>Choose a season</strong> with the Season selector on Races (2023 up to
-                    the latest season). Telemetry has its own Season selector. Overview and Drivers
-                    use the season the site is configured to show.
+                    the latest season). Telemetry and Race results have their own Season selector;
+                    Race results also lets you choose a race weekend.
                 </li>
                 <li>
                     <strong>Open a weekend</strong> by clicking a race card. Use the session tabs
