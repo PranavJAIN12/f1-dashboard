@@ -17,7 +17,7 @@ export default function Loading() {
                 ))}
             </div>
             <span className="sr-only" role="status">
-                Loading drivers
+                Loading race results
             </span>
         </div>
     );

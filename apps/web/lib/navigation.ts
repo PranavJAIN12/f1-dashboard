@@ -1,5 +1,6 @@
 import {
     Activity,
+    BookOpen,
     ChartColumn,
     Flag,
     GitCompareArrows,
@@ -14,11 +15,12 @@ export type NavItem = { label: string; href: string; icon: LucideIcon };
 export const primaryNav: NavItem[] = [
     { label: "Overview", href: "/", icon: LayoutDashboard },
     { label: "Races", href: "/races", icon: Flag },
-    { label: "Drivers", href: "/drivers", icon: Users },
+    { label: "Race results", href: "/drivers", icon: Users },
     { label: "Compare", href: "/compare", icon: GitCompareArrows },
     { label: "Telemetry", href: "/telemetry", icon: Activity },
     { label: "Analytics", href: "/analytics", icon: ChartColumn },
     { label: "Live", href: "/live", icon: Radio },
+    { label: "Guide", href: "/guide", icon: BookOpen },
 ];
 
 // Same destinations the original sidebar linked to, derived from the configured engine URL.

@@ -38,10 +38,10 @@ const features: Feature[] = [
         tag: { label: "Available", variant: "accent" },
     },
     {
-        label: "Drivers",
+        label: "Race results",
         href: "/drivers",
         icon: Users,
-        text: "Driver classification and points from a reference race weekend.",
+        text: "Choose a season and race to see the finishing order, points and fastest lap.",
         tag: { label: "Available", variant: "accent" },
     },
     {
