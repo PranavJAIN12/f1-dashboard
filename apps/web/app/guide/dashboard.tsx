@@ -50,12 +50,12 @@ const pages: {
         use: "Read what happened in a session.",
     },
     {
-        name: "Drivers",
+        name: "Race results",
         href: "/drivers",
         icon: Users,
         status: "Available",
-        text: "One driver card per entrant, from the classification of a single reference race. Not season standings.",
-        use: "See who finished where in that race.",
+        text: "Finishing order, points, starting grid and fastest lap for one race. Not season standings.",
+        use: "See how the drivers finished in the selected race.",
     },
     {
         name: "Telemetry",
@@ -204,8 +204,8 @@ const metricGroups: { title: string; where: string; metrics: Metric[] }[] = [
         ],
     },
     {
-        title: "Drivers page",
-        where: "Drivers",
+        title: "Race results page",
+        where: "Race results",
         metrics: [
             {
                 name: "Points, Grid and Best lap",
@@ -549,8 +549,8 @@ export function DashboardSection() {
                     </li>
                     <li>
                         Which season and race the deployed site defaults to. The code default is
-                        2026 (<Kbd>DEFAULT_SEASON</Kbd>), and the Drivers page uses round 8 of that
-                        season.
+                        2026 (<Kbd>DEFAULT_SEASON</Kbd>), and the Race results page uses round 8 of
+                        that season.
                     </li>
                     <li>
                         Whether season standings will be added, and whether Compare and Analytics
@@ -643,10 +643,10 @@ export function NextSection() {
             cta: "Open Telemetry",
         },
         {
-            title: "Meet the entrants",
+            title: "Explore race results",
             href: "/drivers",
-            text: "Browse one race’s classification as driver cards, with grid, points and best lap.",
-            cta: "See Drivers",
+            text: "See how every driver finished, with points, starting position and fastest lap.",
+            cta: "See race results",
         },
     ];
     return (

@@ -32,7 +32,12 @@ export default async function Drivers() {
                         Driver intelligence / {DEFAULT_SEASON} round{" "}
                         {String(STANDINGS_ROUND).padStart(2, "0")}
                     </div>
-                    <h1>Drivers</h1>
+                    <h1>Race results</h1>
+                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                        See how each driver finished in this race, including points, starting
+                        position and fastest lap. These are results from one race, not season
+                        championship standings.
+                    </p>
                     {race ? (
                         <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                             <span className="font-medium text-foreground">{race.event_name}</span>
