@@ -24,6 +24,27 @@ Swagger: http://localhost:8000/docs
 ReDoc: http://localhost:8000/redoc
 OpenAPI: http://localhost:8000/openapi.json
 
+#### MCP server (chatbot tool access)
+
+The data engine's REST API is also exposed as MCP (Model Context Protocol) tools, so an LLM
+chatbot can query race, driver, team, analytics and telemetry data directly. The MCP server
+calls the FastAPI app in-process (no separate HTTP server needs to be running) and reuses its
+validation, response contracts and error handling.
+
+```bash
+cd services/data-engine
+source .venv/bin/activate
+python -m app.mcp
+```
+
+This starts the server on stdio, the transport MCP clients (e.g. Claude Desktop, VS Code) use
+to launch tool servers as a subprocess. Point a client's MCP config at
+`python -m app.mcp` with `cwd` set to `services/data-engine`.
+
+Tool definitions live in `services/data-engine/app/mcp/server.py`, grouped to mirror the API:
+races, drivers, teams, analytics, telemetry and AI analyst. See `app/mcp/client.py` for the
+in-process HTTP bridge.
+
 ### Frontend
 
 Requires Node.js 24 LTS (`apps/web/.nvmrc`; enforced through `engines` and `engine-strict`). With nvm: `nvm use`.
