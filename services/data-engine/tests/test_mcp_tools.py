@@ -46,7 +46,7 @@ async def test_list_races_calls_schedule_with_year(monkeypatch):
     assert '"event_name": "Bahrain Grand Prix"' in text
 
 
-async def test_get_race_results_forwards_session_query_param(monkeypatch):
+async def test_get_session_results_forwards_session_query_param(monkeypatch):
     captured = {}
 
     def fake_results(year, round_number, code="R"):
@@ -55,7 +55,7 @@ async def test_get_race_results_forwards_session_query_param(monkeypatch):
 
     monkeypatch.setattr("app.api.routes.results", fake_results)
     text = await _ok_text(await mcp.call_tool(
-        "get_race_results", {"year": 2024, "round_number": 1, "session": "Q"},
+        "get_session_results", {"year": 2024, "round_number": 1, "session": "Q"},
     ))
     assert captured == {"year": 2024, "round_number": 1, "code": "Q"}
     assert '"driver_id": "VER"' in text
@@ -82,3 +82,21 @@ async def test_get_driver_not_found_raises_tool_error(monkeypatch):
     )
     with pytest.raises(ToolError, match="Driver not found"):
         await mcp.call_tool("get_driver", {"driver_id": "ZZZ", "year": 2024, "round_number": 1})
+
+
+async def test_validation_error_is_a_readable_sentence():
+    with pytest.raises(ToolError) as e:
+        await mcp.call_tool("get_race", {"year": 2022, "round_number": 1})
+    message = str(e.value)
+    assert "year" in message and "2023" in message and "[{" not in message
+
+
+async def test_tools_have_no_stubs_or_hidden_defaults():
+    tools = {t.name: t for t in await mcp.list_tools()}
+    assert not {"ask_f1_analyst", "get_race_summary", "get_driver_analysis", "get_strategy_analysis"} & tools.keys()
+    for t in tools.values():
+        required = set(t.input_schema["required"])
+        assert "year" in required
+        if t.name != "list_races":
+            assert "round_number" in required
+    assert tools["get_laps"].input_schema["properties"]["session"]["enum"] == ["R", "Q", "S", "SQ", "FP1", "FP2", "FP3"]

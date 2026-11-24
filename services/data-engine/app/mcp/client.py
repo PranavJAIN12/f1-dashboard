@@ -9,8 +9,6 @@ from typing import Any
 
 import httpx
 
-from app.main import app
-
 BASE_URL = "http://data-engine.internal/api/v1"
 
 
@@ -23,23 +21,46 @@ class ApiError(Exception):
         super().__init__(f"API request failed with status {status_code}: {detail}")
 
 
+def describe_detail(detail: Any) -> str:
+    """Turn an API error body into a sentence an LLM (or a person) can act on."""
+    if isinstance(detail, str):
+        return detail
+    if isinstance(detail, dict):
+        return str(detail.get("message") or detail.get("code") or detail)
+    if isinstance(detail, list):
+        # FastAPI validation errors: [{"loc": ["query", "year"], "msg": "...", ...}]
+        parts = []
+        for item in detail:
+            if isinstance(item, dict) and "msg" in item:
+                where = ".".join(str(p) for p in item.get("loc", []) if p not in ("query", "path", "body"))
+                parts.append(f"{where}: {item['msg']}" if where else str(item["msg"]))
+            else:
+                parts.append(str(item))
+        return "Invalid arguments - " + "; ".join(parts)
+    return str(detail)
+
+
 def _transport_client() -> httpx.AsyncClient:
+    # Imported lazily: app.main imports the chat route, which imports the MCP server, which imports this module.
+    from app.main import app
+
     # ASGITransport drives the FastAPI app directly, so no server process needs to be running.
-    transport = httpx.ASGITransport(app=app)
-    return httpx.AsyncClient(transport=transport, base_url=BASE_URL)
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE_URL)
+
+
+def _clean(params: dict[str, Any] | None) -> dict[str, Any]:
+    return {k: v for k, v in (params or {}).items() if v is not None}
 
 
 async def get(path: str, params: dict[str, Any] | None = None) -> dict:
-    clean_params = {k: v for k, v in (params or {}).items() if v is not None}
     async with _transport_client() as client:
-        response = await client.get(path, params=clean_params)
+        response = await client.get(path, params=_clean(params))
     return _unwrap(response)
 
 
 async def post(path: str, json: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict:
-    clean_params = {k: v for k, v in (params or {}).items() if v is not None}
     async with _transport_client() as client:
-        response = await client.post(path, json=json, params=clean_params)
+        response = await client.post(path, json=json, params=_clean(params))
     return _unwrap(response)
 
 

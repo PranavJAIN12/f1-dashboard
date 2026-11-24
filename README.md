@@ -41,9 +41,48 @@ This starts the server on stdio, the transport MCP clients (e.g. Claude Desktop,
 to launch tool servers as a subprocess. Point a client's MCP config at
 `python -m app.mcp` with `cwd` set to `services/data-engine`.
 
-Tool definitions live in `services/data-engine/app/mcp/server.py`, grouped to mirror the API:
-races, drivers, teams, analytics, telemetry and AI analyst. See `app/mcp/client.py` for the
+Tool definitions live in `services/data-engine/app/mcp/server.py` (19 tools: races, drivers, teams,
+analytics, telemetry). Responses are returned in full, never truncated. See `app/mcp/client.py` for the
 in-process HTTP bridge.
+
+#### Chat endpoint (Ollama + MCP tools, streamed)
+
+The FastAPI app also serves a chat endpoint that runs a local Ollama model with the MCP tools and
+streams everything as server-sent events.
+
+```bash
+ollama serve                      # and `ollama pull gpt-oss:20b` once
+uvicorn app.main:app --reload --port 8000
+
+curl -N -X POST http://localhost:8000/api/v1/chat -H 'content-type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Who won the 2024 Bahrain GP?"}]}'
+curl http://localhost:8000/api/v1/chat/status   # Ollama reachable? model installed?
+```
+
+The request is stateless: send the whole conversation as `messages` (`user` / `assistant`, last one
+must be `user`). Optional `model` overrides `OLLAMA_MODEL`. Events (`event:` name, JSON `data:`):
+
+| Event         | Data                                         | Meaning                                    |
+| ------------- | -------------------------------------------- | ------------------------------------------ |
+| `token`       | `{content}`                                  | Answer text delta                          |
+| `thinking`    | `{content}`                                  | Reasoning delta (models that expose it)    |
+| `tool_call`   | `{id, name, arguments}`                      | The model called a tool                    |
+| `tool_result` | `{id, name, is_error, content}`              | Full tool output (JSON text, not trimmed)  |
+| `done`        | `{model, rounds}`                            | Finished                                   |
+| `error`       | `{message}`                                  | Failed; the stream ends                    |
+
+Use `fetch` + a stream reader on the frontend (`EventSource` cannot send a POST body).
+
+Models must support native tool calling. `gpt-oss:20b` was verified end to end; `llama3.2` (3B) wrote
+tool calls as plain text instead of calling them, so avoid very small models. Large tools (telemetry)
+return hundreds of KB, so `OLLAMA_NUM_CTX` (default 32768) matters: Ollama drops the oldest context
+silently when it is exceeded.
+
+| Variable          | Default                  | Purpose                  |
+| ----------------- | ------------------------ | ------------------------ |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server            |
+| `OLLAMA_MODEL`    | `gpt-oss:20b`            | Default chat model       |
+| `OLLAMA_NUM_CTX`  | `32768`                  | Context window in tokens |
 
 ### Frontend
 
