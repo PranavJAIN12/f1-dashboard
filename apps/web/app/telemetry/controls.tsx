@@ -10,14 +10,14 @@ export type Option = { value: string; label: string; disabled?: boolean };
 type Params = Record<string, string | undefined>;
 
 // All selections live in the URL so a view can be shared and renders on the server.
-function useNavigate() {
+export function useNavigate(path = "/telemetry") {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const go = (params: Params) => {
         const query = new URLSearchParams();
         for (const [key, value] of Object.entries(params))
             if (value !== undefined) query.set(key, value);
-        startTransition(() => router.push(`/telemetry?${query}`));
+        startTransition(() => router.push(`${path}?${query}`));
     };
     return { go, pending };
 }
@@ -33,7 +33,7 @@ function Field({ id, label, children }: { id: string; label: string; children: R
     );
 }
 
-function Choice({
+export function Choice({
     id,
     label,
     value,
@@ -64,7 +64,7 @@ function Choice({
     );
 }
 
-const bar = "flex flex-wrap items-end gap-x-4 gap-y-3";
+export const bar = "flex flex-wrap items-end gap-x-4 gap-y-3";
 
 export function SessionControls({
     year,
@@ -73,6 +73,7 @@ export function SessionControls({
     seasons,
     rounds,
     sessions,
+    path,
 }: {
     year: number;
     round: number;
@@ -80,8 +81,9 @@ export function SessionControls({
     seasons: number[];
     rounds: Option[];
     sessions: Option[];
+    path?: string;
 }) {
-    const { go, pending } = useNavigate();
+    const { go, pending } = useNavigate(path);
     return (
         <div className={cn(bar, pending && "opacity-60 transition-opacity")} aria-busy={pending}>
             <Choice

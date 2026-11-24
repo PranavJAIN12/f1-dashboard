@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CloudRain, Droplets, Gauge, Sun, Thermometer, Wind } from "lucide-react";
 import { formatLapTime, formatSessionTime } from "@/lib/format";
 import type { LapRow, WeatherSample } from "@/lib/schemas";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,16 @@ const WEATHER_PAGE_SIZE = 12;
 function metric(value: string | number | null | undefined) {
     return value === null || value === undefined || value === "" ? "-" : value;
 }
+const TYRES: Record<string, string> = {
+    SOFT: "🔴",
+    MEDIUM: "🟡",
+    HARD: "⚪",
+    INTERMEDIATE: "🟢",
+    WET: "🔵",
+};
+function tyre(compound: string | null | undefined) {
+    return compound ? `${TYRES[compound.toUpperCase()] ?? "⚫"} ${compound}` : "-";
+}
 function numbers(values: Array<number | null | undefined>) {
     return values.filter(
         (value): value is number => typeof value === "number" && Number.isFinite(value),
@@ -48,12 +59,13 @@ export function LapsTable({ laps }: { laps: LapTableRow[] }) {
     const [page, setPage] = useState(1);
     const lapCount = new Set(laps.map((lap) => lap.lap_number)).size;
     const visible = laps.slice((page - 1) * LAP_PAGE_SIZE, page * LAP_PAGE_SIZE);
+    const bestTime = Math.min(...numbers(laps.map((lap) => lap.lap_time_seconds)));
 
     return (
         <Card>
             <CardHeader>
                 <div className="section-heading">
-                    <CardTitle>Lap data</CardTitle>
+                    <CardTitle>⏱️ Lap data</CardTitle>
                     <Badge variant="secondary">{laps.length} records</Badge>
                 </div>
             </CardHeader>
@@ -61,23 +73,34 @@ export function LapsTable({ laps }: { laps: LapTableRow[] }) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Driver</TableHead>
+                            <TableHead>🏎️ Driver</TableHead>
                             <TableHead>Lap</TableHead>
                             <TableHead>Time</TableHead>
-                            <TableHead>Tyre</TableHead>
+                            <TableHead>🛞 Tyre</TableHead>
                             <TableHead>Pos</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="[&_tr:nth-child(even)]:bg-muted/30">
                         {visible.map((lap) => (
                             <TableRow key={`${lap.driver_id}-${lap.lap_number}`}>
                                 <TableCell className="font-medium text-foreground">
                                     {lap.driver}
                                 </TableCell>
                                 <TableCell>{metric(lap.lap_number)}</TableCell>
-                                <TableCell>{formatLapTime(lap.lap_time_seconds)}</TableCell>
+                                <TableCell
+                                    className={
+                                        lap.lap_time_seconds === bestTime
+                                            ? "font-mono font-bold text-accent"
+                                            : "font-mono"
+                                    }
+                                >
+                                    {formatLapTime(lap.lap_time_seconds)}
+                                    {lap.lap_time_seconds === bestTime ? (
+                                        <span className="table-secondary">🟣 Fastest lap</span>
+                                    ) : null}
+                                </TableCell>
                                 <TableCell>
-                                    <Badge variant="outline">{metric(lap.compound)}</Badge>
+                                    <Badge variant="outline">{tyre(lap.compound)}</Badge>
                                 </TableCell>
                                 <TableCell>{metric(lap.position)}</TableCell>
                             </TableRow>
@@ -109,49 +132,74 @@ export function WeatherPanel({ weather }: { weather: WeatherSample[] }) {
         <Card>
             <CardHeader>
                 <div className="section-heading">
-                    <CardTitle>Track conditions</CardTitle>
+                    <CardTitle>🌦️ Track conditions</CardTitle>
                     <Badge variant="secondary">{weather.length} samples</Badge>
                 </div>
             </CardHeader>
             <CardContent>
                 <div className="weather-summary">
                     <div>
-                        <span className="label">Average air</span>
-                        <strong>{averageAir === null ? "-" : `${averageAir.toFixed(1)} C`}</strong>
+                        <span className="label flex items-center gap-1.5">
+                            <Thermometer
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5 text-orange-500"
+                            />
+                            Average air
+                        </span>
+                        <strong>{averageAir === null ? "-" : `${averageAir.toFixed(1)} °C`}</strong>
                     </div>
                     <div>
-                        <span className="label">Average track</span>
+                        <span className="label flex items-center gap-1.5">
+                            <Gauge aria-hidden="true" className="h-3.5 w-3.5 text-red-500" />
+                            Average track
+                        </span>
                         <strong>
-                            {averageTrack === null ? "-" : `${averageTrack.toFixed(1)} C`}
+                            {averageTrack === null ? "-" : `${averageTrack.toFixed(1)} °C`}
                         </strong>
                     </div>
                     <div>
-                        <span className="label">Air range</span>
-                        <strong>{range(weather.map((sample) => sample.AirTemp))} C</strong>
+                        <span className="label flex items-center gap-1.5">
+                            <Sun aria-hidden="true" className="h-3.5 w-3.5 text-yellow-500" />
+                            Air range
+                        </span>
+                        <strong>{range(weather.map((sample) => sample.AirTemp))} °C</strong>
                     </div>
                     <div>
-                        <span className="label">Rain samples</span>
+                        <span className="label flex items-center gap-1.5">
+                            <CloudRain aria-hidden="true" className="h-3.5 w-3.5 text-blue-500" />
+                            Rain samples
+                        </span>
                         <strong>{wetSamples}</strong>
                     </div>
                 </div>
+                <p className="table-note mb-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span className="flex items-center gap-1">
+                        <Droplets aria-hidden="true" className="h-3.5 w-3.5" /> Humidity{" "}
+                        {average(weather.map((s) => s.Humidity))?.toFixed(0) ?? "-"}% avg
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <Wind aria-hidden="true" className="h-3.5 w-3.5" /> Wind{" "}
+                        {average(weather.map((s) => s.WindSpeed))?.toFixed(1) ?? "-"} m/s avg
+                    </span>
+                </p>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Time</TableHead>
-                            <TableHead>Air</TableHead>
-                            <TableHead>Track</TableHead>
-                            <TableHead>Humidity</TableHead>
-                            <TableHead>Pressure</TableHead>
-                            <TableHead>Wind</TableHead>
-                            <TableHead>Rain</TableHead>
+                            <TableHead>🕒 Time</TableHead>
+                            <TableHead>🌡️ Air</TableHead>
+                            <TableHead>🛣️ Track</TableHead>
+                            <TableHead>💧 Humidity</TableHead>
+                            <TableHead>📊 Pressure</TableHead>
+                            <TableHead>💨 Wind</TableHead>
+                            <TableHead>☔ Rain</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="[&_tr:nth-child(even)]:bg-muted/30">
                         {visible.map((sample) => (
                             <TableRow key={sample.Time}>
                                 <TableCell>{formatSessionTime(sample.Time)}</TableCell>
-                                <TableCell>{metric(sample.AirTemp)} C</TableCell>
-                                <TableCell>{metric(sample.TrackTemp)} C</TableCell>
+                                <TableCell>{metric(sample.AirTemp)} °C</TableCell>
+                                <TableCell>{metric(sample.TrackTemp)} °C</TableCell>
                                 <TableCell>{metric(sample.Humidity)}%</TableCell>
                                 <TableCell>{metric(sample.Pressure)} hPa</TableCell>
                                 <TableCell>{metric(sample.WindSpeed)} m/s</TableCell>
@@ -159,9 +207,9 @@ export function WeatherPanel({ weather }: { weather: WeatherSample[] }) {
                                     {sample.Rainfall === null ? (
                                         "-"
                                     ) : sample.Rainfall ? (
-                                        <Badge variant="accent">Wet</Badge>
+                                        <Badge variant="accent">🌧️ Wet</Badge>
                                     ) : (
-                                        <Badge variant="outline">Dry</Badge>
+                                        <Badge variant="outline">☀️ Dry</Badge>
                                     )}
                                 </TableCell>
                             </TableRow>

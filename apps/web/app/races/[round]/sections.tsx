@@ -107,6 +107,11 @@ export async function Snapshot(props: SectionProps) {
                             >
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="font-mono text-xs font-semibold text-muted-foreground">
+                                        {row.position === 1
+                                            ? "🥇"
+                                            : row.position === 2
+                                              ? "🥈"
+                                              : "🥉"}{" "}
                                         P{row.position}
                                     </span>
                                     <span className="text-sm font-bold">{row.abbreviation}</span>
@@ -221,7 +226,7 @@ export function SessionSections(props: SectionProps) {
             <Suspense fallback={<CardSkeleton title="Pit stops" columns={5} className="section" />}>
                 <PitStopsContent {...props} />
             </Suspense>
-            <div className="deferred-grid section">
+            <div className="section flex flex-col gap-6">
                 <Suspense fallback={<CardSkeleton title="Lap data" columns={5} />}>
                     <LapsContent {...props} />
                 </Suspense>
