@@ -16,6 +16,19 @@ import {
 } from "@/components/ui/table";
 
 const PAGE_SIZE = 10;
+const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+function PlacesChange({ grid, position }: { grid: number | null; position: number | null }) {
+    if (!grid || !position || grid === position) return null;
+    const gained = grid - position;
+    return (
+        <span
+            className={`table-secondary font-semibold ${gained > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+        >
+            {gained > 0 ? `▲ ${gained}` : `▼ ${-gained}`}
+        </span>
+    );
+}
 
 function metric(value: string | number | null | undefined) {
     return value === null || value === undefined || value === "" ? "-" : value;
@@ -37,7 +50,7 @@ export function ResultsTable({
         <Card className="section">
             <CardHeader>
                 <div className="section-heading">
-                    <CardTitle>{title}</CardTitle>
+                    <CardTitle>🏁 {title}</CardTitle>
                     <Badge variant="secondary">{results.length} classified</Badge>
                 </div>
             </CardHeader>
@@ -50,25 +63,36 @@ export function ResultsTable({
                             <TableHead>Team</TableHead>
                             <TableHead>Grid</TableHead>
                             <TableHead>Laps</TableHead>
-                            <TableHead>Fastest lap</TableHead>
-                            {hasPoints ? <TableHead>Pts</TableHead> : null}
+                            <TableHead>🟣 Fastest lap</TableHead>
+                            {hasPoints ? <TableHead>⭐ Pts</TableHead> : null}
                             <TableHead>Status</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="[&_tr:nth-child(even)]:bg-muted/30">
                         {visible.map((result) => (
                             <TableRow key={result.driver_id}>
-                                <TableCell className="font-bold text-foreground">
-                                    {metric(result.position)}
+                                <TableCell>
+                                    <Badge
+                                        variant={result.position === 1 ? "accent" : "secondary"}
+                                        className="min-w-8 justify-center font-bold"
+                                    >
+                                        {result.position ? MEDALS[result.position] : null}{" "}
+                                        {metric(result.position)}
+                                    </Badge>
                                 </TableCell>
                                 <TableCell>
                                     <b>{result.abbreviation}</b>
                                     <span className="table-secondary">{result.full_name}</span>
                                 </TableCell>
                                 <TableCell>{metric(result.team)}</TableCell>
-                                <TableCell>{metric(result.grid)}</TableCell>
+                                <TableCell>
+                                    {metric(result.grid)}
+                                    <PlacesChange grid={result.grid} position={result.position} />
+                                </TableCell>
                                 <TableCell>{metric(result.laps)}</TableCell>
-                                <TableCell>{formatLapTime(result.fastest_lap)}</TableCell>
+                                <TableCell className="font-mono">
+                                    {formatLapTime(result.fastest_lap)}
+                                </TableCell>
                                 {hasPoints ? (
                                     <TableCell className="font-bold text-foreground">
                                         {metric(result.points)}
@@ -106,7 +130,7 @@ export function PitStopsTable({ pitStops }: { pitStops: PitStop[] }) {
         <Card className="section">
             <CardHeader>
                 <div className="section-heading">
-                    <CardTitle>Pit stops</CardTitle>
+                    <CardTitle>🔧 Pit stops</CardTitle>
                     <Badge variant="secondary">{pitStops.length} stops</Badge>
                 </div>
             </CardHeader>
@@ -117,11 +141,11 @@ export function PitStopsTable({ pitStops }: { pitStops: PitStop[] }) {
                             <TableHead>Driver</TableHead>
                             <TableHead>Lap</TableHead>
                             <TableHead>Pit lane</TableHead>
-                            <TableHead>Stationary</TableHead>
+                            <TableHead>⏱️ Stationary</TableHead>
                             <TableHead>Recorded (UTC)</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="[&_tr:nth-child(even)]:bg-muted/30">
                         {visible.map((stop) => (
                             <TableRow key={stop.stop_number}>
                                 <TableCell className="font-medium text-foreground">
